@@ -62,7 +62,7 @@ public class Store {
         System.out.println("Test 3");
         listOrder.stream()
                 .map(Order::getStatus)
-                .collect(Collectors.toSet()).forEach(System.out::println);
+                .distinct().forEach(System.out::println);
 
     }
 
@@ -144,7 +144,7 @@ public class Store {
     private static void fifteen() {
         System.out.println("Test 15");
         System.out.println("is delivery date after: " + listOrder.stream()
-                .anyMatch(order -> order.getDeliveryDate().isAfter(LocalDate.of(2023, 2, 11))));
+                .noneMatch(order -> order.getDeliveryDate().isAfter(LocalDate.of(2023, 2, 11))));
     }
 
     private static void sixteen() {
