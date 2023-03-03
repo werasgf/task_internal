@@ -1,18 +1,16 @@
 package task.app.task72;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Library {
 
-    private static BlockingQueue<Integer> queue = new ArrayBlockingQueue<>(1, true);
-    public static final HashMap<Book, WhereToReadBook> bookLibrary = new HashMap<>();
-    public static final HashMap<Book, Boolean> bookInStock = new HashMap<>();
+    private static final BlockingQueue<Integer> queue = new ArrayBlockingQueue<>(1, true);
+    public static final ConcurrentHashMap<Book, WhereToReadBook> bookLibrary = new ConcurrentHashMap<>();
+    public static final ConcurrentHashMap<Book, Boolean> bookInStock = new ConcurrentHashMap<>();
 
     public static void comeToLibrary(ActionReader action, List<Book> books, int countName) {
         takeQueue(action, books, countName);

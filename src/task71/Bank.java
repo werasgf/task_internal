@@ -1,64 +1,19 @@
 package task.app.task71;
 
 import java.util.TimerTask;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
-public class Bank extends TimerTask implements Runnable {
-    private static final BlockingQueue<Integer> queueOne = new ArrayBlockingQueue<>(1, true);
-    private static final BlockingQueue<Integer> queueTwo = new ArrayBlockingQueue<>(1, true);
-    private static final BlockingQueue<Integer> queueThree = new ArrayBlockingQueue<>(1, true);
+public class Bank extends TimerTask {
 
     private static final int HOW_MUCH_TO_TOP_UP_CASH_REGISTER = 10000;
     private static final Storage storage = new Storage();
 
-    private static ConcurrentHashMap<Integer, Score> mapClient = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<Integer, Score> mapClient = new ConcurrentHashMap<>();
 
-
-    volatile static BoxOffice boxOfficeOne = new BoxOffice(10000);
-    volatile static BoxOffice boxOfficeTwo = new BoxOffice(10000);
-    volatile static BoxOffice boxOfficeThree = new BoxOffice(10000);
-
-    public static void queue(int client, Action action, int money) {
-        try {
-            if (queueOne.offer(client)) {
-                boxOfficeOne(client, action, money);
-                queueOne.take();
-            } else if (queueTwo.offer(client)) {
-                boxOfficeTwo(client, action, money);
-                queueTwo.take();
-            } else if (queueThree.offer(client)) {
-                boxOfficeThree(client, action, money);
-                queueThree.take();
-            } else {
-                Thread.sleep(1);
-                queue(client, action, money);
-            }
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static void queue(int clientOne, Action action, int money, int clientTwo) {
-        try {
-            if (queueOne.offer(clientOne)) {
-                boxOfficeOne(clientOne, action, money, clientTwo);
-                queueOne.take();
-            } else if (queueTwo.offer(clientOne)) {
-                boxOfficeTwo(clientOne, action, money, clientTwo);
-                queueTwo.take();
-            } else if (queueThree.offer(clientOne)) {
-                boxOfficeThree(clientOne, action, money, clientTwo);
-                queueThree.take();
-            } else {
-                Thread.sleep(1);
-                queue(clientOne, action, money, clientTwo);
-            }
-        } catch (InterruptedException e) {
-            throw new RuntimeException(e);
-        }
-    }
+    private static final BoxOffice boxOfficeOne = new BoxOffice(new AtomicInteger(10000));
+    private static final BoxOffice boxOfficeTwo = new BoxOffice(new AtomicInteger(10000));
+    private static final BoxOffice boxOfficeThree = new BoxOffice(new AtomicInteger(10000));
 
     public static void boxOfficeOne(int client, Action action, int money) {
         System.out.println("к  кассе подошел поток " + client);
@@ -66,11 +21,11 @@ public class Bank extends TimerTask implements Runnable {
             mapClient.put(client, new Score(0));
         }
         if (action == Action.WITH_DRAW) {
-            withDraw(client, money, 1);
+            withDraw(client, money, boxOfficeOne);
         } else if (action == Action.INSERT_MONEY) {
-            insertMoney(client, money, 1);
+            insertMoney(client, money, boxOfficeOne);
         } else if (action == Action.PAYMENT) {
-            payment(client, money, 1);
+            payment(client, money, boxOfficeOne);
         } else if (action == Action.CURRENCY_EXCHANGE) {
             currencyExchange(client);
         } else {
@@ -85,11 +40,11 @@ public class Bank extends TimerTask implements Runnable {
             mapClient.put(client, new Score(0));
         }
         if (action == Action.WITH_DRAW) {
-            withDraw(client, money, 2);
+            withDraw(client, money, boxOfficeTwo);
         } else if (action == Action.INSERT_MONEY) {
-            insertMoney(client, money, 2);
+            insertMoney(client, money, boxOfficeTwo);
         } else if (action == Action.PAYMENT) {
-            payment(client, money, 2);
+            payment(client, money, boxOfficeTwo);
         } else if (action == Action.CURRENCY_EXCHANGE) {
             currencyExchange(client);
         } else {
@@ -104,11 +59,11 @@ public class Bank extends TimerTask implements Runnable {
             mapClient.put(client, new Score(0));
         }
         if (action == Action.WITH_DRAW) {
-            withDraw(client, money, 3);
+            withDraw(client, money, boxOfficeThree);
         } else if (action == Action.INSERT_MONEY) {
-            insertMoney(client, money, 3);
+            insertMoney(client, money, boxOfficeThree);
         } else if (action == Action.PAYMENT) {
-            payment(client, money, 3);
+            payment(client, money, boxOfficeThree);
         } else if (action == Action.CURRENCY_EXCHANGE) {
             currencyExchange(client);
         } else {
@@ -171,87 +126,38 @@ public class Bank extends TimerTask implements Runnable {
         System.out.println("из кассы ушел поток " + clientOne);
     }
 
-    private static void withDraw(int client, int money, int numberBoxOffice) {
-        if (numberBoxOffice == 1) {
-            if (mapClient.get(client).getMoney() >= money) {
-                if (boxOfficeOne.getAmountOfMoneyInCashRegister() <= money) {
-                    mapClient.get(client).setMoney(mapClient.get(client).getMoney() - money);
-                    boxOfficeOne.setAmountOfMoneyInCashRegister(boxOfficeOne.getAmountOfMoneyInCashRegister() - money);
-                    System.out.println(client + " забрал деньги");
-                } else {
-                    System.out.println("касса не может выдать столько денег");
-                }
+    private static void withDraw(int client, int money, BoxOffice boxOffice) {
+        if (mapClient.get(client).getMoney() >= money) {
+            if (boxOffice.getAmountOfMoneyInCashRegister() >= money) {
+                mapClient.get(client).setMoney(mapClient.get(client).getMoney() - money);
+                boxOffice.setAmountOfMoneyInCashRegister(boxOffice.getAmountOfMoneyInCashRegister() - money);
+                System.out.println(client + " забрал деньги");
             } else {
-                System.out.println("на вашем счету не хватает сдредств. Вы хотите снять " + money + ", но у вас на счету " + mapClient.get(client).getMoney());
-            }
-        } else if (numberBoxOffice == 2) {
-            if (mapClient.get(client).getMoney() >= money) {
-                if (boxOfficeTwo.getAmountOfMoneyInCashRegister() <= money) {
-                    mapClient.get(client).setMoney(mapClient.get(client).getMoney() - money);
-                    boxOfficeTwo.setAmountOfMoneyInCashRegister(boxOfficeTwo.getAmountOfMoneyInCashRegister() - money);
-                    System.out.println(client + " забрал деньги");
-                } else {
-                    System.out.println("касса не может выдать столько денег");
-                }
-            } else {
-                System.out.println("на вашем счету не хватает сдредств. Вы хотите снять " + money + ", но у вас на счету " + mapClient.get(client).getMoney());
+                System.out.println("касса выдает все деньги, имеющиеся в наличии (" + boxOffice.getAmountOfMoneyInCashRegister() + ") клиенту " + client + " и делает запрос в хранилище на выдочу оставшихся средств");
+                mapClient.get(client).setMoney(mapClient.get(client).getMoney() - money);
+                storage.setStorage(storage.getStorage() + (boxOffice.getAmountOfMoneyInCashRegister() - money));
+                boxOffice.setAmountOfMoneyInCashRegister(0);
+                System.out.println(client + " забрал деньги");
             }
         } else {
-            if (mapClient.get(client).getMoney() >= money) {
-                if (boxOfficeThree.getAmountOfMoneyInCashRegister() <= money) {
-                    mapClient.get(client).setMoney(mapClient.get(client).getMoney() - money);
-                    boxOfficeThree.setAmountOfMoneyInCashRegister(boxOfficeThree.getAmountOfMoneyInCashRegister() - money);
-                    System.out.println(client + " забрал деньги");
-                } else {
-                    System.out.println("касса не может выдать столько денег");
-                }
-            } else {
-                System.out.println("на вашем счету не хватает сдредств. Вы хотите снять " + money + ", но у вас на счету " + mapClient.get(client).getMoney());
-            }
+            System.out.println("на вашем счету не хватает сдредств. Вы хотите снять " + money + ", но у вас на счету " + mapClient.get(client).getMoney());
         }
     }
 
-    private static void insertMoney(int client, int money, int numberBoxOffice) {
-        if (numberBoxOffice == 1) {
-            System.out.println(client + " положил деньги на счет");
-            mapClient.get(client).setMoney(mapClient.get(client).getMoney() + money);
-            boxOfficeOne.setAmountOfMoneyInCashRegister(boxOfficeOne.getAmountOfMoneyInCashRegister() + money);
-        } else if (numberBoxOffice == 2) {
-            System.out.println(client + " положил деньги на счет");
-            mapClient.get(client).setMoney(mapClient.get(client).getMoney() + money);
-            boxOfficeTwo.setAmountOfMoneyInCashRegister(boxOfficeTwo.getAmountOfMoneyInCashRegister() + money);
-        } else {
-            System.out.println(client + " положил деньги на счет");
-            mapClient.get(client).setMoney(mapClient.get(client).getMoney() + money);
-            boxOfficeThree.setAmountOfMoneyInCashRegister(boxOfficeThree.getAmountOfMoneyInCashRegister() + money);
-        }
+    private static void insertMoney(int client, int money, BoxOffice boxOffice) {
+        System.out.println(client + " положил деньги на счет");
+        mapClient.get(client).setMoney(mapClient.get(client).getMoney() + money);
+        boxOffice.setAmountOfMoneyInCashRegister(boxOffice.getAmountOfMoneyInCashRegister() + money);
+
     }
 
-    private static void payment(int client, int money, int numberBoxOffice) {
-        if (numberBoxOffice == 1) {
-            if (mapClient.get(client).getMoney() > money) {
-                System.out.println(client + " произвел оплату");
-                mapClient.get(client).setMoney(mapClient.get(client).getMoney() - money);
-                boxOfficeOne.setAmountOfMoneyInCashRegister(boxOfficeOne.getAmountOfMoneyInCashRegister() + money);
-            } else {
-                System.out.println("у клиента " + client + " нехватает средств на счету для оплаты чего-то");
-            }
-        } else if (numberBoxOffice == 2) {
-            if (mapClient.get(client).getMoney() > money) {
-                System.out.println(client + " произвел оплату");
-                mapClient.get(client).setMoney(mapClient.get(client).getMoney() - money);
-                boxOfficeTwo.setAmountOfMoneyInCashRegister(boxOfficeTwo.getAmountOfMoneyInCashRegister() + money);
-            } else {
-                System.out.println("у клиента " + client + " нехватает средств на счету для оплаты чего-то");
-            }
+    private static void payment(int client, int money, BoxOffice boxOffice) {
+        if (mapClient.get(client).getMoney() > money) {
+            System.out.println(client + " произвел оплату");
+            mapClient.get(client).setMoney(mapClient.get(client).getMoney() - money);
+            boxOffice.setAmountOfMoneyInCashRegister(boxOffice.getAmountOfMoneyInCashRegister() + money);
         } else {
-            if (mapClient.get(client).getMoney() > money) {
-                System.out.println(client + " произвел оплату");
-                mapClient.get(client).setMoney(mapClient.get(client).getMoney() - money);
-                boxOfficeThree.setAmountOfMoneyInCashRegister(boxOfficeThree.getAmountOfMoneyInCashRegister() + money);
-            } else {
-                System.out.println("у клиента " + client + " нехватает средств на счету для оплаты чего-то");
-            }
+            System.out.println("у клиента " + client + " нехватает средств на счету для оплаты чего-то");
         }
     }
 
@@ -262,20 +168,28 @@ public class Bank extends TimerTask implements Runnable {
 
     @Override
     public void run() {
-        if (boxOfficeOne.getAmountOfMoneyInCashRegister() <= 5000) {
-            boxOfficeOne.setAmountOfMoneyInCashRegister(boxOfficeOne.getAmountOfMoneyInCashRegister() + HOW_MUCH_TO_TOP_UP_CASH_REGISTER);
-            storage.setStorage(storage.getStorage() - HOW_MUCH_TO_TOP_UP_CASH_REGISTER);
-        }
-        if (boxOfficeTwo.getAmountOfMoneyInCashRegister() <= 5000) {
-            boxOfficeTwo.setAmountOfMoneyInCashRegister(boxOfficeTwo.getAmountOfMoneyInCashRegister() + HOW_MUCH_TO_TOP_UP_CASH_REGISTER);
-            storage.setStorage(storage.getStorage() - HOW_MUCH_TO_TOP_UP_CASH_REGISTER);
-        }
-        if (boxOfficeThree.getAmountOfMoneyInCashRegister() <= 5000) {
-            boxOfficeThree.setAmountOfMoneyInCashRegister(boxOfficeThree.getAmountOfMoneyInCashRegister() + HOW_MUCH_TO_TOP_UP_CASH_REGISTER);
-            storage.setStorage(storage.getStorage() - HOW_MUCH_TO_TOP_UP_CASH_REGISTER);
-        }
+        takeMoney(boxOfficeOne);
+        takeMoney(boxOfficeTwo);
+        takeMoney(boxOfficeThree);
+        issueMoney(boxOfficeOne);
+        issueMoney(boxOfficeTwo);
+        issueMoney(boxOfficeThree);
         if (storage.getStorage() <= 0) {
             System.out.println("у банка закончались деньги");
+        }
+    }
+
+    private void takeMoney(BoxOffice boxOffice) {
+        if (boxOffice.getAmountOfMoneyInCashRegister() >= 20000) {
+            storage.setStorage(storage.getStorage() + (boxOffice.getAmountOfMoneyInCashRegister() - HOW_MUCH_TO_TOP_UP_CASH_REGISTER));
+            boxOffice.setAmountOfMoneyInCashRegister(HOW_MUCH_TO_TOP_UP_CASH_REGISTER);
+        }
+    }
+
+    private void issueMoney(BoxOffice boxOffice) {
+        if (boxOffice.getAmountOfMoneyInCashRegister() <= 5000) {
+            boxOffice.setAmountOfMoneyInCashRegister(boxOffice.getAmountOfMoneyInCashRegister() + HOW_MUCH_TO_TOP_UP_CASH_REGISTER);
+            storage.setStorage(storage.getStorage() - HOW_MUCH_TO_TOP_UP_CASH_REGISTER);
         }
     }
 }

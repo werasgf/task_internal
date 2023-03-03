@@ -2,6 +2,8 @@ package task.app.task71;
 
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 public class TestBank {
     public static void main(String[] args) {
@@ -10,13 +12,23 @@ public class TestBank {
         Timer timer = new Timer(true);
         timer.scheduleAtFixedRate(myBank, 0, 1);
 
+
+        BlockingQueue<Integer> queueOne = new ArrayBlockingQueue<>(1, true);
+        BlockingQueue<Integer> queueTwo = new ArrayBlockingQueue<>(1, true);
+        BlockingQueue<Integer> queueThree = new ArrayBlockingQueue<>(1, true);
+
+
         new Thread(new Runnable() {
             @Override
             public void run() {
                 try {
-                    Bank.queue(1, Action.INSERT_MONEY, 20000);
-                    Thread.sleep(1);
-                    Bank.queue(1, Action.WITH_DRAW, 10000);
+                    queueOne.put(1);
+                    Bank.boxOfficeOne(1, Action.INSERT_MONEY, 200000);
+                    queueOne.take();
+                    Thread.sleep(3);
+                    queueTwo.put(1);
+                    Bank.boxOfficeTwo(1, Action.WITH_DRAW, 200000);
+                    queueTwo.take();
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -27,11 +39,17 @@ public class TestBank {
             @Override
             public void run() {
                 try {
-                    Bank.queue(2, Action.INSERT_MONEY, 20000);
+                    queueOne.put(2);
+                    Bank.boxOfficeOne(2, Action.INSERT_MONEY, 20000);
+                    queueOne.take();
                     Thread.sleep(1);
-                    Bank.queue(2, Action.PAYMENT, 1000);
+                    queueOne.put(2);
+                    Bank.boxOfficeOne(2, Action.PAYMENT, 1000);
+                    queueOne.take();
                     Thread.sleep(1);
-                    Bank.queue(2, Action.WITH_DRAW, 10000);
+                    queueTwo.put(2);
+                    Bank.boxOfficeTwo(2, Action.WITH_DRAW, 10000);
+                    queueTwo.take();
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -42,11 +60,17 @@ public class TestBank {
             @Override
             public void run() {
                 try {
-                    Bank.queue(3, Action.INSERT_MONEY, 10000);
+                    queueTwo.put(3);
+                    Bank.boxOfficeTwo(3, Action.INSERT_MONEY, 10000);
+                    queueTwo.take();
                     Thread.sleep(1);
-                    Bank.queue(3, Action.MONEY_TRANSFER, 10000, 10);
+                    queueOne.put(3);
+                    Bank.boxOfficeOne(3, Action.MONEY_TRANSFER, 10000, 10);
+                    queueOne.take();
                     Thread.sleep(1);
-                    Bank.queue(3, Action.MONEY_TRANSFER, 1000, 2);
+                    queueThree.put(3);
+                    Bank.boxOfficeThree(3, Action.MONEY_TRANSFER, 1000, 2);
+                    queueThree.take();
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -57,9 +81,13 @@ public class TestBank {
             @Override
             public void run() {
                 try {
-                    Bank.queue(4, Action.INSERT_MONEY, 5000);
+                    queueOne.put(4);
+                    Bank.boxOfficeOne(4, Action.INSERT_MONEY, 5000);
+                    queueOne.take();
                     Thread.sleep(1);
-                    Bank.queue(4, Action.CURRENCY_EXCHANGE, 5000);
+                    queueThree.put(4);
+                    Bank.boxOfficeThree(4, Action.CURRENCY_EXCHANGE, 5000);
+                    queueThree.take();
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -70,9 +98,13 @@ public class TestBank {
             @Override
             public void run() {
                 try {
-                    Bank.queue(5, Action.INSERT_MONEY, 10000);
+                    queueThree.put(5);
+                    Bank.boxOfficeThree(5, Action.INSERT_MONEY, 10000);
+                    queueThree.take();
                     Thread.sleep(1);
-                    Bank.queue(5, Action.MONEY_TRANSFER, 5000, 3);
+                    queueTwo.put(5);
+                    Bank.boxOfficeTwo(5, Action.MONEY_TRANSFER, 5000, 3);
+                    queueTwo.take();
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -83,11 +115,17 @@ public class TestBank {
             @Override
             public void run() {
                 try {
-                    Bank.queue(6, Action.INSERT_MONEY, 20000);
+                    queueTwo.put(6);
+                    Bank.boxOfficeTwo(6, Action.INSERT_MONEY, 20000);
+                    queueTwo.take();
                     Thread.sleep(1);
-                    Bank.queue(6, Action.INSERT_MONEY, 10000);
+                    queueOne.put(6);
+                    Bank.boxOfficeOne(6, Action.INSERT_MONEY, 10000);
+                    queueOne.take();
                     Thread.sleep(1);
-                    Bank.queue(6, Action.MONEY_TRANSFER, 3500, 5);
+                    queueThree.put(6);
+                    Bank.boxOfficeThree(6, Action.MONEY_TRANSFER, 3500, 5);
+                    queueThree.take();
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
@@ -99,16 +137,23 @@ public class TestBank {
             public void run() {
 
                 try {
-                    Bank.queue(7, Action.INSERT_MONEY, 5000);
+                    queueTwo.put(7);
+                    Bank.boxOfficeTwo(7, Action.INSERT_MONEY, 5000);
+                    queueTwo.take();
                     Thread.sleep(1);
-                    Bank.queue(7, Action.PAYMENT, 6000);
+                    queueThree.put(7);
+                    Bank.boxOfficeThree(7, Action.PAYMENT, 6000);
+                    queueThree.take();
                     Thread.sleep(1);
-                    Bank.queue(7, Action.WITH_DRAW, 6000);
+                    queueTwo.put(7);
+                    Bank.boxOfficeTwo(7, Action.WITH_DRAW, 6000);
+                    queueTwo.take();
                 } catch (InterruptedException e) {
                     throw new RuntimeException(e);
                 }
             }
         }).start();
+
 
         try {
             Thread.sleep(5000);

@@ -1,14 +1,16 @@
 package task.app.task71;
 
+import java.util.concurrent.atomic.AtomicInteger;
+
 public class Storage {
 
-    private static int storage = 100000;
+    private static AtomicInteger storage = new AtomicInteger(100000);
 
     public void setStorage(int storage) {
-        Storage.storage = storage;
+        Storage.storage.set(storage);
     }
 
     public int getStorage() {
-        return storage;
+        return storage.get();
     }
 }

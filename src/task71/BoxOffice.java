@@ -1,17 +1,19 @@
 package task.app.task71;
 
-public class BoxOffice {
-    private int amountOfMoneyInCashRegister;
+import java.util.concurrent.atomic.AtomicInteger;
 
-    public BoxOffice (int amountOfMoneyInCashRegister) {
+public class BoxOffice {
+    private final AtomicInteger amountOfMoneyInCashRegister;
+
+    public BoxOffice (AtomicInteger amountOfMoneyInCashRegister) {
         this.amountOfMoneyInCashRegister = amountOfMoneyInCashRegister;
     }
 
     public void setAmountOfMoneyInCashRegister(int amountOfMoneyInCashRegister) {
-        this.amountOfMoneyInCashRegister = amountOfMoneyInCashRegister;
+        this.amountOfMoneyInCashRegister.set(amountOfMoneyInCashRegister);
     }
 
     public int getAmountOfMoneyInCashRegister() {
-        return amountOfMoneyInCashRegister;
+        return amountOfMoneyInCashRegister.get();
     }
 }
